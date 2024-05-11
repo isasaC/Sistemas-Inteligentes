@@ -26,6 +26,28 @@ public class AgenteBBDD extends Agent {
 	DatabaseConnection dbCon = new DatabaseConnection();
 	String sentenciaSQL;
 	ACLMessage msg;
+
+	String resultBBDD = "Nombre	
+			Nippon Grill	
+			Nippon Grill	
+			Nippon Grill	
+			Marisquería del Norte	
+			Trattoria Da Luigi	
+			Tokyo Ramen	
+			El Asador Castellano	
+			Antojitos Juanita	
+			Gran Muralla	
+			Dolce Vita	
+			Taberna del Gourmet	
+			Marisquería del Norte	
+			Fiesta Mexicana	
+			Marisquería del Norte	
+			Trattoria Da Luigi	
+			Trattoria Da Luigi	
+			Palacio Pekín	
+			Tokyo Ramen	
+			Trattoria Da Luigi	
+			Trattoria Da Luigi"
 	
     @Override
     protected void setup() {
@@ -36,7 +58,7 @@ public class AgenteBBDD extends Agent {
                 if (msg != null) {
                 	sentenciaSQL = msg.getContent();
                     System.out.println("El AgenteBBDD ha recibido la sentencia: " + msg.getContent());
-                    enviarSentenciaBBDD("SELECT Nombre FROM restaurantes;");
+                    mostrarResultadosEnVentana(resultBBDD);
                 } else {
                     block();
                 }
@@ -53,7 +75,7 @@ public class AgenteBBDD extends Agent {
     		String resultString = resultSetToString(resultSet);
     		mostrarResultadosEnVentana(resultString);
     		System.out.println(resultString);
-    		//enviarRespuestaAVisualizacion(resultString, msg.getSender().getLocalName());  		
+    		enviarRespuestaAVisualizacion(resultString, msg.getSender().getLocalName());  		
     	} catch (SQLException e) {
     		System.out.println("ERROR: no se pudo procesar la sentencia");
     	}
