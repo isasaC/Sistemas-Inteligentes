@@ -36,7 +36,7 @@ public class AgenteBBDD extends Agent {
                 if (msg != null) {
                 	sentenciaSQL = msg.getContent();
                     System.out.println("El AgenteBBDD ha recibido la sentencia: " + msg.getContent());
-                    enviarSentenciaBBDD(sentenciaSQL);
+                    enviarSentenciaBBDD("SELECT Nombre FROM restaurantes;");
                 } else {
                     block();
                 }
