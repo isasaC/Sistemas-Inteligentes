@@ -21,7 +21,7 @@ public class AgenteChatBot extends Agent {
                 if (msg != null) {
                 	String question = msg.getContent();
                 	System.out.println("El AgenteChatBot ha recibido la pregunta: " + question);
-                    handleRequest(question, msg.getSender().getLocalName());
+                    enviarRespuestaAVisualizacion("Te estoy vacilando", msg.getSender().getLocalName());
                 } else {
                     block();
                 }
