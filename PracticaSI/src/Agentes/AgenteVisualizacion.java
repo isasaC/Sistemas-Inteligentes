@@ -10,16 +10,21 @@ import java.awt.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
+
+
 public class AgenteVisualizacion extends Agent {
     private JFrame frame;
     private JTextField textField;
     private JTextArea responseArea;
     private JPanel mainPanel;
     private  JButton dbRequestButton;
+    private JProgressBar progressBar;
+    
+    String sentenciaSQL;
 
     @Override
     protected void setup() {
-        prepareGUI();
+        prepareGUI();        
         
         addBehaviour(new CyclicBehaviour(this) {
         	
@@ -31,10 +36,10 @@ public class AgenteVisualizacion extends Agent {
                     System.out.println("Respuesta recibida: " + content);
                     SwingUtilities.invokeLater(() -> {
                         parseAndShowResponse(content);
+                        progressBar.setVisible(false);
                     });
                 		                 		
                 } else {
-                	System.out.println("AgenteVisualizacion no recibió correctamente un  mensaje");
                     block();
                 }
             }
@@ -43,7 +48,7 @@ public class AgenteVisualizacion extends Agent {
 
     private void prepareGUI() {
         frame = new JFrame(getLocalName());
-        frame.setSize(500, 275);  // Tamaño ajustado para compactar la interfaz
+        frame.setSize(650, 358);  // Tamaño ajustado para compactar la interfaz
         frame.setLayout(new BorderLayout());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -52,6 +57,12 @@ public class AgenteVisualizacion extends Agent {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         mainPanel.setBackground(new Color(50, 50, 50)); // Fondo oscuro
+        
+     // JProgressBar configuración
+        progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        progressBar.setVisible(false); // Inicialmente oculto
+        progressBar.setPreferredSize(new Dimension(300, 20));
 
         // Configuración de la fuente
         Font textFieldFont = new Font("Sans Serif", Font.PLAIN, 14);
@@ -60,25 +71,34 @@ public class AgenteVisualizacion extends Agent {
         JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         inputPanel.setBackground(new Color(50, 50, 50));  // Fondo del panel oscuro
 
-        textField = new JTextField(20);  // Tamaño ajustado
-        textField.setFont(textFieldFont);
+        textField = new JTextField(45);  // Inicializa el JTextField con espacio para 32 caracteres
+        textField.setFont(new Font("Sans Serif", Font.PLAIN, 14));
         textField.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 1));
-        textField.setForeground(new Color(220, 220, 220)); // Texto claro
-        textField.setBackground(new Color(70, 70, 70));   // Fondo del campo de texto oscuro
+        textField.setForeground(new Color(220, 220, 220)); // Color del texto
+        textField.setBackground(new Color(70, 70, 70));   // Color de fondo
+        textField.setMaximumSize(new Dimension(Integer.MAX_VALUE, textField.getPreferredSize().height));
+
+        // Configuración del layout y adición al panel
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;  // Importante para permitir expansión horizontal
+        inputPanel.add(textField, gbc);
 
         // Botón de envío
-        JButton sendButton = new JButton("Consultar");
+        JButton sendButton = new JButton("Query");
         styleButton(sendButton);
         sendButton.addActionListener(e -> {
             String text = textField.getText();
-            sendRequestToProcessingAgent(text);
+            sendRequestToChatBotAgent(text);
+            SwingUtilities.invokeLater(() -> progressBar.setVisible(true));
         });
 
         inputPanel.add(textField);
         inputPanel.add(sendButton);
 
         // Área de respuesta
-        responseArea = new JTextArea(6, 20);  // Reducción de altura
+        responseArea = new JTextArea(12, 9);  // Reducción de altura
         responseArea.setEditable(false);
         responseArea.setFont(textFieldFont);
         responseArea.setForeground(new Color(220, 220, 220)); // Texto claro
@@ -95,7 +115,7 @@ public class AgenteVisualizacion extends Agent {
         styleButton(dbRequestButton);
         dbRequestButton.setVisible(false); // Inicialmente no visible
         dbRequestButton.addActionListener(e -> {
-            enviarSQLBBDD(responseArea.getText());
+            enviarSQLBBDD(sentenciaSQL);
         });
 
         // Añadir componentes al panel principal
@@ -122,7 +142,7 @@ public class AgenteVisualizacion extends Agent {
 
 
 
-    private void sendRequestToProcessingAgent(String text) {
+    private void sendRequestToChatBotAgent(String text) {
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
         msg.addReceiver(new jade.core.AID("AgenteChatBot", jade.core.AID.ISLOCALNAME));
         msg.setContent(text);
@@ -130,7 +150,7 @@ public class AgenteVisualizacion extends Agent {
         //doWait();
     }
 
-    private void parseAndShowResponse(String json) {
+    private void parseAndShowResponse3(String json) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(json);
@@ -144,6 +164,48 @@ public class AgenteVisualizacion extends Agent {
             System.out.println("Error al procesar JSON: " + e.getMessage());
         }
     }
+    
+    private void parseAndShowResponse(String json) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(json);
+
+            // Variables para almacenar los valores extraídos
+            String explicacionSentencia = null;
+            StringBuilder responseText = new StringBuilder();
+
+            // Comprobar si el JSON contiene el objeto "json" con los atributos "sentenciaSQL" y "explicacionSentencia"
+            if (rootNode.has("json")) {
+                JsonNode jsonNode = rootNode.path("json");
+                if (jsonNode.has("sentenciaSQL") && jsonNode.has("explicacionSentencia")) {
+                    sentenciaSQL = jsonNode.path("sentenciaSQL").asText();
+                    explicacionSentencia = jsonNode.path("explicacionSentencia").asText();
+                    responseText.append("Sentencia SQL: ").append(sentenciaSQL).append("\n\n");                    
+                    responseText.append("Explicación: ").append(explicacionSentencia);
+                 // Hacer visible el botón dbRequestButton
+                    SwingUtilities.invokeLater(() -> {
+                        dbRequestButton.setVisible(true);
+                    });
+                }
+            } else if (rootNode.has("text")) {
+                explicacionSentencia = rootNode.path("text").asText();
+                responseText.append(explicacionSentencia);
+                SwingUtilities.invokeLater(() -> {
+                    dbRequestButton.setVisible(false);
+                });
+            }
+
+            // Mostrar el texto en responseArea
+            responseArea.setText(responseText.toString());
+            
+        } catch (Exception e) {
+            responseArea.setText("Error al procesar JSON: " + e.getMessage());
+            System.out.println("Error al procesar JSON: " + e.getMessage());
+        }
+    }
+
+
+
     
     private void enviarSQLBBDD(String text) {
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
