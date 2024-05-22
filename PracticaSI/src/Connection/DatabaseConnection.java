@@ -10,7 +10,7 @@ public class DatabaseConnection {
 
     // Asegúrate de cambiar estos valores según tu configuración de MySQL
     private static final String USERNAME = "root";
-    private static final String PASSWORD = "Pichirilo12";
+    private static final String PASSWORD = "zaq123rfv.01";
     private static final String DATABASE_URL = "jdbc:mysql://localhost:3306/RestaurantesDB?serverTimezone=UTC";
 
 
