@@ -4,11 +4,17 @@ import java.sql.Connection;
 
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
+
+
+
 import javax.swing.JScrollPane;
 import javax.swing.JPanel;
 import javax.swing.BorderFactory;
 import java.awt.BorderLayout;
 import java.awt.Font;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.awt.Color;
 
 import java.sql.ResultSet;
@@ -26,28 +32,6 @@ public class AgenteBBDD extends Agent {
 	DatabaseConnection dbCon = new DatabaseConnection();
 	String sentenciaSQL;
 	ACLMessage msg;
-
-	String resultBBDD = "Nombre	
-			Nippon Grill	
-			Nippon Grill	
-			Nippon Grill	
-			Marisquería del Norte	
-			Trattoria Da Luigi	
-			Tokyo Ramen	
-			El Asador Castellano	
-			Antojitos Juanita	
-			Gran Muralla	
-			Dolce Vita	
-			Taberna del Gourmet	
-			Marisquería del Norte	
-			Fiesta Mexicana	
-			Marisquería del Norte	
-			Trattoria Da Luigi	
-			Trattoria Da Luigi	
-			Palacio Pekín	
-			Tokyo Ramen	
-			Trattoria Da Luigi	
-			Trattoria Da Luigi"
 	
     @Override
     protected void setup() {
@@ -58,7 +42,7 @@ public class AgenteBBDD extends Agent {
                 if (msg != null) {
                 	sentenciaSQL = msg.getContent();
                     System.out.println("El AgenteBBDD ha recibido la sentencia: " + msg.getContent());
-                    mostrarResultadosEnVentana(resultBBDD);
+                    enviarSentenciaBBDD(sentenciaSQL);
                 } else {
                     block();
                 }
@@ -69,13 +53,15 @@ public class AgenteBBDD extends Agent {
     public void enviarSentenciaBBDD(String sentencia) {
     	try {
     		Connection connection = dbCon.getConnection();
-    		Statement statement = connection.createStatement();
-    		ResultSet resultSet = statement.executeQuery(sentencia);
+    		Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
     		
-    		String resultString = resultSetToString(resultSet);
+    		ResultSet resultSet = statement.executeQuery(sentencia);
+    		String nextFileName = getNextFileName("results");
+            guardarResultSetEnCSV(resultSet, "results/" + nextFileName);
+    		
+            resultSet = statement.executeQuery(sentencia);
+            String resultString = resultSetToString(resultSet);
     		mostrarResultadosEnVentana(resultString);
-    		System.out.println(resultString);
-    		enviarRespuestaAVisualizacion(resultString, msg.getSender().getLocalName());  		
     	} catch (SQLException e) {
     		System.out.println("ERROR: no se pudo procesar la sentencia");
     	}
@@ -84,14 +70,14 @@ public class AgenteBBDD extends Agent {
     private void mostrarResultadosEnVentana(String resultString) {
         JFrame frame = new JFrame("Resultados de la Consulta");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(600, 500);  // Ajusta el tamaño del JFrame
+        frame.setSize(800, 600);  // Ajusta el tamaño del JFrame
         frame.setLocationRelativeTo(null);  // Centra la ventana en la pantalla
 
         // Crea un JTextArea para mostrar los resultados
         JTextArea textArea = new JTextArea(20, 50);
         textArea.setText(resultString);
         textArea.setEditable(false);
-        textArea.setFont(new Font("SansSerif", Font.PLAIN, 14));  // Configura la fuente del texto
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));  // Usa una fuente monoespaciada
         textArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));  // Añade un borde vacío para el relleno
 
         // Establece un color de fondo y de primer plano para el textArea
@@ -112,26 +98,112 @@ public class AgenteBBDD extends Agent {
         frame.setVisible(true);
     }
 
+
     
     public String resultSetToString(ResultSet rs) throws SQLException {
         StringBuilder sb = new StringBuilder();
         ResultSetMetaData metaData = rs.getMetaData();
         int columnCount = metaData.getColumnCount();
 
+        // Calcular la longitud máxima de los datos en cada columna
+        int[] maxColumnWidths = new int[columnCount];
+        for (int i = 1; i <= columnCount; i++) {
+            maxColumnWidths[i - 1] = metaData.getColumnName(i).length();
+        }
+
+        // Scroll through ResultSet to determine max widths
+        rs.beforeFirst(); // Posiciona el cursor antes de la primera fila para iterar de nuevo si es necesario
+        while (rs.next()) {
+            for (int i = 1; i <= columnCount; i++) {
+                String columnValue = rs.getString(i);
+                if (columnValue != null) {
+                    maxColumnWidths[i - 1] = Math.max(maxColumnWidths[i - 1], columnValue.length());
+                }
+            }
+        }
+
         // Encabezados de columna
         for (int i = 1; i <= columnCount; i++) {
-            sb.append(metaData.getColumnName(i)).append("\t");
+            String header = metaData.getColumnName(i);
+            sb.append(String.format("%-" + (maxColumnWidths[i - 1] + 2) + "s", header));
+        }
+        sb.append("\n");
+
+        // Línea de separación
+        int totalWidth = 0;
+        for (int i = 1; i <= columnCount; i++) {
+            int columnWidth = maxColumnWidths[i - 1] + 2;
+            totalWidth += columnWidth;
+            sb.append("-".repeat(columnWidth));
         }
         sb.append("\n");
 
         // Datos de las filas
+        rs.beforeFirst(); // Posiciona de nuevo antes de la primera fila
         while (rs.next()) {
             for (int i = 1; i <= columnCount; i++) {
-                sb.append(rs.getString(i)).append("\t");
+                String fieldValue = rs.getString(i) == null ? "" : rs.getString(i);
+                sb.append(String.format("%-" + (maxColumnWidths[i - 1] + 2) + "s", fieldValue));
             }
             sb.append("\n");
         }
+
+        // Añadir línea de separación final
+        sb.append("-".repeat(totalWidth));
+        sb.append("\n");
+
         return sb.toString();
+    }
+
+
+    
+ // Método para guardar ResultSet en CSV
+    private void guardarResultSetEnCSV(ResultSet resultSet, String filePath) throws SQLException {
+        try {
+            File file = new File(filePath);
+            file.getParentFile().mkdirs(); // Crea el directorio si no existe
+            FileWriter csvWriter = new FileWriter(file);
+            
+            int columnCount = resultSet.getMetaData().getColumnCount();
+            // Escribir nombres de columnas como encabezados del CSV
+            for (int i = 1; i <= columnCount; i++) {
+                csvWriter.append(resultSet.getMetaData().getColumnName(i));
+                if (i < columnCount) csvWriter.append(",");
+            }
+            csvWriter.append("\n");
+            
+            // Escribir datos del ResultSet
+            while (resultSet.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    csvWriter.append(resultSet.getString(i));
+                    if (i < columnCount) csvWriter.append(",");
+                }
+                csvWriter.append("\n");
+            }
+            
+            csvWriter.flush();
+            csvWriter.close();
+        } catch (IOException e) {
+            System.out.println("ERROR: no se pudo escribir el archivo CSV");
+        }
+    }
+    
+    private String getNextFileName(String directoryPath) {
+        File directory = new File(directoryPath);
+        File[] files = directory.listFiles();
+        int maxNumber = 0;
+        if (files != null) {
+            for (File file : files) {
+                String name = file.getName();
+                if (name.matches("resultado(\\d+)\\.csv")) {
+                    int number = Integer.parseInt(name.substring(9, name.length() - 4));
+                    if (number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
+            }
+        }
+        return "resultado" + (maxNumber + 1) + ".csv";
     }
     
     private void enviarRespuestaAVisualizacion(String text, String sender) {
