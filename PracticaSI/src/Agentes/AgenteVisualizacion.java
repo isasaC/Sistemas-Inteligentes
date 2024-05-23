@@ -19,6 +19,7 @@ public class AgenteVisualizacion extends Agent {
     private JPanel mainPanel;
     private  JButton dbRequestButton;
     private JProgressBar progressBar;
+    private JLabel spinner;
     
     String sentenciaSQL;
 
@@ -37,6 +38,7 @@ public class AgenteVisualizacion extends Agent {
                     SwingUtilities.invokeLater(() -> {
                         parseAndShowResponse(content);
                         progressBar.setVisible(false);
+                        spinner.setVisible(false);
                     });
                 		                 		
                 } else {
@@ -63,6 +65,11 @@ public class AgenteVisualizacion extends Agent {
         progressBar.setIndeterminate(true);
         progressBar.setVisible(false); // Inicialmente oculto
         progressBar.setPreferredSize(new Dimension(300, 20));
+        
+     // Spinner configuración
+        spinner = new JLabel(new ImageIcon("C:/Users/javie/eclipse-workspace/PracticaSI/src/resources/ruedecita.gif"));
+        spinner.setVisible(false); // Inicialmente oculto
+        spinner.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Configuración de la fuente
         Font textFieldFont = new Font("Sans Serif", Font.PLAIN, 14);
@@ -91,7 +98,7 @@ public class AgenteVisualizacion extends Agent {
         sendButton.addActionListener(e -> {
             String text = textField.getText();
             sendRequestToChatBotAgent(text);
-            SwingUtilities.invokeLater(() -> progressBar.setVisible(true));
+            SwingUtilities.invokeLater(() -> spinner.setVisible(true));
         });
 
         inputPanel.add(textField);
@@ -120,6 +127,8 @@ public class AgenteVisualizacion extends Agent {
 
         // Añadir componentes al panel principal
         mainPanel.add(inputPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Espaciador
+        mainPanel.add(spinner); // Añadir el spinner al panel principal
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Espaciador
         mainPanel.add(scrollPane);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espaciador
