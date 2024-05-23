@@ -19,7 +19,7 @@ public class AgenteVisualizacion extends Agent {
     private JPanel mainPanel;
     private  JButton dbRequestButton;
     private JProgressBar progressBar;
-    private JLabel spinner;
+    //private JLabel spinner;
     
     String sentenciaSQL;
 
@@ -38,7 +38,7 @@ public class AgenteVisualizacion extends Agent {
                     SwingUtilities.invokeLater(() -> {
                         parseAndShowResponse(content);
                         progressBar.setVisible(false);
-                        spinner.setVisible(false);
+                        //spinner.setVisible(false);
                     });
                 		                 		
                 } else {
@@ -60,17 +60,17 @@ public class AgenteVisualizacion extends Agent {
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         mainPanel.setBackground(new Color(50, 50, 50)); // Fondo oscuro
         
-     // JProgressBar configuración
+        // JProgressBar configuración
         progressBar = new JProgressBar();
         progressBar.setIndeterminate(true);
         progressBar.setVisible(false); // Inicialmente oculto
-        progressBar.setPreferredSize(new Dimension(300, 20));
+        progressBar.setPreferredSize(new Dimension(300, 10)); // Más fina
+        progressBar.setBackground(new Color(70, 70, 70)); // Fondo oscuro
+        progressBar.setForeground(new Color(100, 180, 100)); // Color verde suave
+        progressBar.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 1));
+        UIManager.put("ProgressBar.selectionForeground", Color.BLACK);
+        UIManager.put("ProgressBar.selectionBackground", Color.WHITE);
         
-     // Spinner configuración
-        spinner = new JLabel(new ImageIcon("C:/Users/javie/eclipse-workspace/PracticaSI/src/resources/ruedecita.gif"));
-        spinner.setVisible(false); // Inicialmente oculto
-        spinner.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         // Configuración de la fuente
         Font textFieldFont = new Font("Sans Serif", Font.PLAIN, 14);
 
@@ -98,7 +98,7 @@ public class AgenteVisualizacion extends Agent {
         sendButton.addActionListener(e -> {
             String text = textField.getText();
             sendRequestToChatBotAgent(text);
-            SwingUtilities.invokeLater(() -> spinner.setVisible(true));
+            SwingUtilities.invokeLater(() -> progressBar.setVisible(true));
         });
 
         inputPanel.add(textField);
@@ -128,7 +128,7 @@ public class AgenteVisualizacion extends Agent {
         // Añadir componentes al panel principal
         mainPanel.add(inputPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Espaciador
-        mainPanel.add(spinner); // Añadir el spinner al panel principal
+        mainPanel.add(progressBar); // Añadir el spinner al panel principal
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Espaciador
         mainPanel.add(scrollPane);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espaciador
@@ -138,6 +138,7 @@ public class AgenteVisualizacion extends Agent {
         frame.add(mainPanel, BorderLayout.CENTER);
         frame.setVisible(true);
     }
+
 
     private void styleButton(JButton button) {
         button.setFont(new Font("Sans Serif", Font.BOLD, 12));
